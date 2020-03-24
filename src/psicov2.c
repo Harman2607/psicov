@@ -27,6 +27,32 @@
 #define MAXSEQLEN 5000
 #define MINEFSEQS (seqlen)
 
+/*********************/
+//new functions//
+
+
+void savetofile(char filename[], double **matrix, int rows, int cols)
+{
+	FILE *outfile = fopen(filename, "w");
+	for(int i = 0; i<rows; i++)
+	{
+		for(int j = 0; j< cols; j++)
+		{
+			if(j == cols-1)
+				fprintf(outfile, "%lf\n", matrix[i][j]);
+			else
+				fprintf(outfile, "%lf ", matrix[i][j]);
+		}
+	}
+
+	fclose(outfile);
+}
+
+/**********************************/
+
+
+
+
 /* Dump a rude message to standard error and exit */
 void fail(char *fmt, ...)
 {
@@ -41,8 +67,7 @@ void fail(char *fmt, ...)
 }
 
 /* Convert AA letter to numeric code (0-21) */
-int
-                aanum(int ch)
+int aanum(int ch)
 {
     const static int aacvs[] =
     {
@@ -54,10 +79,10 @@ int
 }
 
 /* Allocate matrix */
-void           *allocmat(int rows, int columns, int size)
+void *allocmat(int rows, int columns, int size)
 {
-    int             i;
-    void          **p, *rp;
+    int i;
+    void **p, *rp;
 
     rp = malloc(rows * sizeof(void *) + sizeof(int));
 
@@ -76,9 +101,9 @@ void           *allocmat(int rows, int columns, int size)
 }
 
 /* Allocate vector */
-void           *allocvec(int columns, int size)
+void *allocvec(int columns, int size)
 {
-    void          *p;
+    void *p;
 
     p = calloc(columns, size);
 
@@ -319,15 +344,21 @@ int cmpfn(const void *a, const void *b)
 }
     
 
-int             main(int argc, char **argv)
+int main(int argc, char **argv)
 {
-    int             a, b, i, j, k, seqlen, nids, s, nseqs, ncon, opt, ndim, filtflg=0, approxflg=0, initflg=0, apcflg=1, maxit=10000, npair, nnzero, niter, jerr, shrinkflg=1, rawscflg = 1, pseudoc = 1, minseqsep = 5, overrideflg=0, ntries;
-    unsigned int *wtcount, ccount[MAXSEQLEN];
+    int a, b, i, j, k, seqlen, nids, s, nseqs, ncon, opt, ndim, filtflg=0, approxflg=0, initflg=0, apcflg=1, maxit=10000, npair, nnzero, niter, jerr, shrinkflg=1, rawscflg = 1, pseudoc = 1, minseqsep = 5, overrideflg=0, ntries;
+	//nseqs is the number of sequences in the input file
+	//
+	
+	unsigned int *wtcount, ccount[MAXSEQLEN];
     double thresh=1e-4, del, **pcmat, *pcsum, pcmean, pc, trialrho, rhodefault = -1.0;
     double sum, score, **pa, wtsum, lambda, low_lambda, high_lambda, smean, fnzero, lastfnzero, rfact, r2, targfnzero = 0.0, scsum, scsumsq, mean, sd, zscore, ppv;    
     double *weight, idthresh = -1.0, maxgapf = 0.9, besttd = 1.0, bestrho = 0.001;
-    char            buf[4096], seq[MAXSEQLEN], *blockfn = NULL, **aln;
-    FILE *ifp;
+    char buf[4096], seq[MAXSEQLEN], *blockfn = NULL, **aln;
+	
+	///seq is an array of length l, l is the maximum possible length of sequence
+	
+	FILE *ifp;
 
     while ((opt = getopt(argc, argv, "aflnopr:b:i:t:c:g:d:j:z:")) >= 0)
 	switch (opt)
@@ -388,27 +419,36 @@ int             main(int argc, char **argv)
     if (optind >= argc)
 	fail("PSICOV V2.4 Usage: psicov [options] alnfile\n\nOptions:\n-a\t: use approximate Lasso algorithm\n-n\t: don't pre-shrink the sample covariance matrix\n-f\t: filter low-scoring contacts\n-p\t: output PPV estimates rather than raw scores\n-l\t: don't apply APC to Lasso output\n-r nnn\t: set initial rho parameter\n-d nnn\t: set target precision matrix sparsity (default 0 = not specified)\n-t nnn\t: set Lasso convergence threshold (default 1e-4)\n-i nnn\t: select BLOSUM-like weighting with given identity threshold (default selects threshold automatically)\n-c nnn\t: set pseudocount value (default 1)\n-j nnn\t: set minimum sequence separation (default 5)\n-g nnn\t: maximum fraction of gaps (default 0.9)\n-z nnn\t: set maximum no. of threads\n-b file\t: read rho parameter file\n");
 
+	///////ifp is probably the alignment file variable.
     ifp = fopen(argv[optind], "r");
     if (!ifp)
 	fail("Unable to open alignment file!");
 
+	////in this loop we are calculating the number of sequences in the file by reading the file and using the seq array as a buffer(I think?)
+	////ifp is the file variable
     for (nseqs=0;; nseqs++)
 	if (!fgets(seq, MAXSEQLEN, ifp))
 	    break;
 
+	////allocvec allocates a set number of bytes with the given memmory type
+	////nseq is the number of bytes and char is the data type here
+	////nseq is probably the number of sequences calculated from the input file
     aln = allocvec(nseqs, sizeof(char *));
-    
+	
     weight = allocvec(nseqs, sizeof(double));
 
     wtcount = allocvec(nseqs, sizeof(unsigned int));
     
+	////rewind function sets the file position at the beginning of the file
     rewind(ifp);
     
+	///if to check the alignment of the file
     if (!fgets(seq, MAXSEQLEN, ifp))
 	fail("Bad alignment file!");
     
     seqlen = strlen(seq)-1;
 
+	////assigning memory to aln[0] and also side by side checking if we have gone out of memory or not
     if (!(aln[0] = malloc(seqlen)))
 	fail("Out of memory!");
 
@@ -433,6 +473,9 @@ int             main(int argc, char **argv)
 
     /* Calculate sequence weights (use openMP/pthreads if available) */
 
+//**************************************//
+//weight matrix ka chutiyap shuru
+/**************************************/
     if (idthresh < 0.0)
     {
 	double meanfracid = 0.0;
@@ -504,22 +547,32 @@ int             main(int argc, char **argv)
 	    pa[i][a] /= pseudoc * 21.0 + wtsum;
     }
 
+	/********************************************************************/
+	//weight matrix vala chutiap khatam
+	/********************************************************************/
+
     double **cmat, **rho, **ww, **wwi, **tempmat;
 
+	////ndim = 21m
     ndim = seqlen * 21;
 
+	////cmat and tempmat are of size 21 m . 21m
     cmat = allocmat(ndim, ndim, sizeof(double));
     tempmat = allocmat(ndim, ndim, sizeof(double));
 
-    /* Form the covariance matrix */
+/************************************************************************************/
+    /* Form the covariance matrix */  
+	////cmat is our covariance matrix
+/************************************************************************************/
 #pragma omp parallel for default(shared) private(j,k,a,b)
-    for (i=0; i<seqlen; i++)
+    for (i=0; i<seqlen; i++) ////m is the seqlen
 	for (j=i; j<seqlen; j++)
 	{
 	    double pab[21][21];
 
 	    for (a=0; a<21; a++)
 		for (b=0; b<21; b++)
+		
 		    if (i == j)
 			pab[a][b] = (a == b) ? pa[i][a] : 0.0;
 		    else
@@ -544,7 +597,18 @@ int             main(int argc, char **argv)
 		for (b=0; b<21; b++)
 		    if (i != j || a == b)
 			cmat[i*21+a][j*21+b] = cmat[j*21+b][i*21+a] = pab[a][b] - pa[i][a] * pa[j][b];
+
+			////cmat is the covariance matrix
 	}
+
+	/************************************************/
+	//cmat matrix created//
+	/***********************************************/
+	savetofile("covariancematrix.txt", cmat, 21 * seqlen, 21 * seqlen );
+	//**********************************************/
+	// save the covariance matrix in a file
+	//**********************************************/
+	
 
     /* Shrink sample covariance matrix towards shrinkage target F = Diag(1,1,1,...,1) * smean */
 
