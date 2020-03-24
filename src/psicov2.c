@@ -48,6 +48,7 @@ void savetofile(char filename[], double **matrix, int rows, int cols)
 	fclose(outfile);
 }
 
+
 /**********************************/
 
 
@@ -722,6 +723,8 @@ int main(int argc, char **argv)
 
 	glassofast(ndim, cmat, rho, thresh, maxit, approxflg, initflg, wwi, ww);
 
+
+	savetofile("rhomatrix.txt", rho, 21 * seqlen, 21 * seqlen );
 	/* Quit with optimum rho value so far */
 	if (targfnzero <= 0.0)
 	    break;
