@@ -724,7 +724,8 @@ int main(int argc, char **argv)
 	glassofast(ndim, cmat, rho, thresh, maxit, approxflg, initflg, wwi, ww);
 
 
-	savetofile("rhomatrix.txt", rho, 21 * seqlen, 21 * seqlen );
+	savetofile("covmatrixestimate.txt", ww, 21 * seqlen, 21 * seqlen );
+	savetofile("Inverse_covmatrixestimate.txt", wwi, 21 * seqlen, 21 * seqlen );
 	/* Quit with optimum rho value so far */
 	if (targfnzero <= 0.0)
 	    break;
